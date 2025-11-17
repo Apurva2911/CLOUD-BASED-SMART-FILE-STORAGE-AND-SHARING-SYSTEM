@@ -4,6 +4,13 @@
 SmartDrive is a **secure, serverless file management system** that allows users to upload, store, manage, and share files in the cloud. The system leverages **AWS services** to provide a scalable, reliable, and fully serverless solution with JWT-based authentication and optional CloudFront CDN for faster file access.
 
 ---
+## Testing the Project/URL
+[SmartDrive CloudFront Link]
+
+https://d37vylmpmkwy2d.cloudfront.net/
+
+**Username:** Apurva kadam  
+**Password:** Apurva@123  
 
 ## Project Goal
 - Provide a secure platform for file upload, storage, and management.  
