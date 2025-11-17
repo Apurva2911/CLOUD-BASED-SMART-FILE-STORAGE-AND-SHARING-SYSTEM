@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Apurva's Cloud Drive</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f6f8;
+      color: #333;
+    }
+
+    header {
+      background-color: #1a73e8;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 1.8em;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header button {
+      background-color: #ffffff33;
+      border: 1px solid white;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+
+    header button:hover {
+      background-color: white;
+      color: #1a73e8;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 900px;
+      margin: 30px auto;
+      background-color: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      color: #1a73e8;
+      margin-bottom: 10px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    input[type="text"], input[type="password"], input[type="file"] {
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      margin-right: 10px;
+    }
+
+    button.btn {
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      margin-right: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+
+    button.btn:hover {
+      background-color: #155ab6;
+    }
+
+    #fileList li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-bottom: 1px solid #eee;
+      font-size: 0.95em;
+    }
+
+    #fileList li span.filename {
+      flex: 1;
+      font-weight: 500;
+    }
+
+    .share-link {
+      margin-left: 10px;
+      font-size: 0.85em;
+      color: #1a73e8;
+      word-break: break-all;
+    }
+
+    p {
+      margin-top: 5px;
+      font-weight: bold;
+    }
+
+    /* Hide upload + file sections before login */
+    #uploadSection, #filesSection {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    Apurva's Cloud Drive
+    <button onclick="handleLogout()">Logout</button>
+  </header>
+
+  <div class="container">
+
+    <!-- LOGIN -->
+    <div class="section">
+      <h2>Login</h2>
+      <input type="text" id="username" placeholder="Username">
+      <input type="password" id="password" placeholder="Password">
+      <button class="btn" onclick="handleLogin()">Login</button>
+      <p id="loginStatus"></p>
+    </div>
+
+    <!-- UPLOAD -->
+    <div class="section" id="uploadSection">
+      <h2>Upload File</h2>
+      <input type="file" id="fileInput">
+      <button class="btn" onclick="handleUpload()">Upload</button>
+      <p id="uploadStatus"></p>
+    </div>
+
+    <!-- FILE LIST -->
+    <div class="section" id="filesSection">
+      <h2>Files</h2>
+      <button class="btn" onclick="refreshFileList()">Refresh List</button>
+      <ul id="fileList"></ul>
+    </div>
+
+  </div>
+
+  <script>
+    const API_URL = "https://n7e3mxyw28.execute-api.ap-south-1.amazonaws.com/prod";
+    let token = "";
+
+    // --- LOGIN ---
+    async function handleLogin() {
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+
+      try {
+        const res = await fetch(`${API_URL}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          token = data.token;
+          document.getElementById("loginStatus").innerText = "✅ Login successful!";
+
+          // Show upload + files sections
+          document.getElementById("uploadSection").style.display = "block";
+          document.getElementById("filesSection").style.display = "block";
+
+          // Load files automatically
+          refreshFileList();
+        } else {
+          document.getElementById("loginStatus").innerText = "❌ " + data.error;
+        }
+      } catch (err) {
+        document.getElementById("loginStatus").innerText = "❌ Login failed";
+        console.error(err);
+      }
+    }
+
+    // --- LOGOUT ---
+    function handleLogout() {
+      token = "";
+      document.getElementById("username").value = "";
+      document.getElementById("password").value = "";
+      document.getElementById("loginStatus").innerText = "";
+      document.getElementById("uploadStatus").innerText = "";
+      document.getElementById("fileList").innerHTML = "";
+      document.getElementById("uploadSection").style.display = "none";
+      document.getElementById("filesSection").style.display = "none";
+      alert("✅ Logged out successfully");
+    }
+
+    // --- UPLOAD ---
+    async function handleUpload() {
+      const fileInput = document.getElementById("fileInput");
+      if (!fileInput.files.length) return alert("Select a file to upload");
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      reader.onload = async function(e) {
+        const base64Content = e.target.result.split(',')[1];
+
+        try {
+          const res = await fetch(`${API_URL}/upload`, {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ filename: file.name, fileContent: base64Content })
+          });
+
+          const data = await res.json();
+          document.getElementById("uploadStatus").innerText = data.message || data.error;
+          refreshFileList();
+        } catch(err) {
+          document.getElementById("uploadStatus").innerText = "❌ Upload failed";
+          console.error(err);
+        }
+      };
+
+      reader.readAsDataURL(file);
+    }
+
+    // --- LIST FILES ---
+    async function refreshFileList() {
+      const listEl = document.getElementById("fileList");
+      listEl.innerHTML = "Loading...";
+
+      try {
+        const res = await fetch(`${API_URL}/files`, {
+          method: "GET",
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to fetch files");
+
+        listEl.innerHTML = "";
+        data.files.forEach(file => {
+          const li = document.createElement("li");
+          li.innerHTML = `
+            <span class="filename">${file.file_name}</span>
+            <button class="btn download" onclick="downloadFile('${file.file_name}')">Download</button>
+            <button class="btn delete" onclick="deleteFile('${file.file_id}')">Delete</button>
+            <button class="btn share" onclick="handleShare('${file.file_id}', this)">Share</button>
+            <div class="share-link"></div>
+          `;
+          listEl.appendChild(li);
+        });
+      } catch(err) {
+        listEl.innerHTML = "❌ Failed to load files";
+        console.error(err);
+      }
+    }
+
+    // --- DELETE FILE ---
+    async function deleteFile(file_id) {
+      try {
+        const res = await fetch(`${API_URL}/delete`, {
+          method: "DELETE",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ file_id })
+        });
+        const data = await res.json();
+        alert(data.message || data.error);
+        refreshFileList();
+      } catch(err) {
+        alert("❌ Delete failed");
+        console.error(err);
+      }
+    }
+
+    // --- DOWNLOAD FILE ---
+    async function downloadFile(filename) {
+      try {
+        const res = await fetch(`${API_URL}/download?filename=${encodeURIComponent(filename)}`, {
+          method: "GET",
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Download failed");
+
+        const blob = b64toBlob(data.fileContent);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } catch(err) {
+        alert("❌ Download error: " + err.message);
+        console.error(err);
+      }
+    }
+
+    // Helper: convert base64 to Blob
+    function b64toBlob(base64) {
+      const byteCharacters = atob(base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      return new Blob([byteArray]);
+    }
+
+    // --- SHARE FILE ---
+    async function handleShare(file_id, btn) {
+      const shareLinkDiv = btn.closest("li").querySelector(".share-link");
+      shareLinkDiv.innerText = "Sharing...";
+
+      try {
+        const res = await fetch(`${API_URL}/share`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ file_id })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Share failed");
+
+        shareLinkDiv.innerHTML = `📎 <a href="${data.shareable_link}" target="_blank">${data.shareable_link}</a>`;
+      } catch(err) {
+        shareLinkDiv.innerText = "❌ Share failed";
+        console.error(err);
+      }
+    }
+
+  </script>
+</body>
+</html>
