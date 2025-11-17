@@ -1,0 +1,11 @@
+## Testing the Project
+
+## Demo Account
+- **Username:** Apurva
+- **Password:** Apurva@123  
+
+## Steps to Test
+1. Open the website and login using the demo credentials.  
+2. Upload a file and confirm it appears in the file list.  
+3. Download, delete, and share files to test functionality.  
+4. (Optional) Check metadata in DynamoDB (`file_id`, `filename`, `owner_email`, `upload_date`).  
